@@ -161,7 +161,7 @@
   library(gapminder)
   data(gapminder)
   head(gapminder)
-  x <- subset(gapminder[["lifeExp"]], gapminder[["year"]]==1952)
+  x <- subset(gapminder[["lifeExp"]], gapminder[["year"]]==2007)
   hist(x)
   
   #1
@@ -175,3 +175,43 @@
   #2
   #the proportion of countries in 1952 that have a life expectancy between 60 and 40
   mean(x<=60) - mean(x<=40) #0.4647887
+  
+  #3
+  #the use of sapply
+  plot(ecdf(x))
+  prop = function(q) mean(x <= q)
+  prop(40) #test the custom function
+  qs = seq(from=min(x),to=max(x),length=20)
+  props = sapply(qs,prop)
+  props = sapply(qs,function(q) mean(x<=q))
+  props #print the content of props to console
+  plot(qs,props)
+  
+  #Normal Distribution Excercises
+  library(downloader) 
+  url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleControlsPopulation.csv"
+  filename <- basename(url)
+  download(url, destfile=filename)
+  x <- unlist( read.csv(filename) )
+  
+  set.seed(1)
+  aveOf5 <- vector("numeric",1000)
+  aveOf50 <- vector("numeric",1000)
+  for (i in 1:1000) {
+    aveOf5[i] <- mean(sample(x,5))
+    aveOf50[i] <- mean(sample(x,50))
+  }
+  
+  #1
+  #draw histgrams of distribution of averages with sample size of 5 and 50
+  hist(aveOf5)
+  hist(aveOf50)
+  
+  #2
+  #what proportion is between 23 and 25 in the distribution with sample size 50
+  mean(aveOf50<=25)-mean(aveOf50<=23) #0.985
+  
+  #3
+  #compute the proportion of values below a value x with pnorm(x,mu,sigma)
+  #we can answer the Q2 with knowing mu=23.9 and sigma=0.43
+  pnorm(25,23.9,0.43)-pnorm(23,23.9,0.43) #0.9765648
