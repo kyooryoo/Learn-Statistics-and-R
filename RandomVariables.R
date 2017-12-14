@@ -5,7 +5,15 @@ install.packages("installr")
 library(installr)
 updateR()
 
-#install the package of downloader if not yet
+#prepare the libs
+library("downloader")
+library("dplyr")
+library("UsingR")
+library("rafalib")
+library("gapminder")
+library("magrittr")
+
+#install the packages if not yet
 install.packages("downloader")
 install.packages("dplyr")
 install.packages("UsingR")
@@ -309,13 +317,11 @@ for(i in 1:n){
   se<-sqrt(var(treatment)/N+var(control)/N)
   nulls[i]<-(mean(treatment)-mean(control))/se
 }
-library(rafalib)
 mypar()
 qqnorm(nulls)
 abline(0,1)
 
 # prepare the data for exercises
-library(downloader)
 url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
 filename <- "femaleMiceWeights.csv"
 if(!file.exists("femaleMiceWeights.csv")) download(url,destfile=filename)
@@ -324,19 +330,33 @@ dat <- read.csv(filename)
 #1
 set.seed(1)
 n<-100 #roll 100 dies for each time
-p<-0.01 #the proportion of 6s
+p<-1/6 #the proportion of 6s
 fun<-function(){
   x<-sample(1:6,n,replace=TRUE)
   z<-(mean(x==6)-p)/sqrt(p*(1-p)/n)
   return(z)
 }
 z<-replicate(10000,fun())
-mean(abs(z)>2)
+mean(abs(z)>2) # 0.0424 when p = 1/6
 
 #2
-X <- filter(dat, Diet=="chow") %>% select(Bodyweight) %>% unlist
-Y <- filter(dat, Diet=="hf") %>% select(Bodyweight) %>% unlist
+#find the mean and sd of sample X
+#something wrong with the code bellow
+#X <- filter(dat, Diet=="chow") %>% select(Bodyweight) %>% unlist
+#use these two lines of code bellow instead for getting the same result
+X <- filter(dat, Diet=="chow")
+X <- X[,c("Bodyweight")]
 cat("the sample average of X is", mean(X), "\n")
 cat("the standard deviation of X is", sd(X), "\n")
-mean(X>(mean(X)+2))
-mean(X<(mean(X)-2))
+
+#3
+#the probability that mean of sample X
+#is off by 2 sd from mean of population x
+#answer is as bellow, which I did not make it out
+2 * ( 1-pnorm(2/sd(X) * sqrt(12) ) ) # 0.02189533
+#reverse answer to find the route to solution
+x_sd <- sd(X)/sqrt(12) # is not sd(X) is the sd of sample X already?
+z <- 2/x_sd # convert 2 grams to num of sd
+cd <- pnorm(z) # calculate the cumulative density to z
+half <- 1 - cd # probability of onside off 2 grams from population mean
+2 * half # 0.02189533
