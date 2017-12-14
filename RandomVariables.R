@@ -296,8 +296,10 @@ dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extd
 filename <- "femaleMiceWeights.csv"
 url <- paste0(dir, filename)
 datUrl <- read.csv(url)
-control <- filter(datUrl,Diet=="chow") %>% select(Bodyweight) %>% unlist
-treatment <- filter(datUrl,Diet=="hf") %>% select(Bodyweight) %>% unlist
+control <- filter(datUrl,Diet=="chow")
+control <- control[,c("Bodyweight")]
+treatment <- filter(datUrl,Diet=="hf")
+treatment <- treatment[,c("Bodyweight")]
 N <- length(treatment)
 obs <- mean(treatment) - mean(control)
 se <- sqrt(var(treatment)/N + var(control)/N) #the standard error
@@ -338,6 +340,7 @@ fun<-function(){
 }
 z<-replicate(10000,fun())
 mean(abs(z)>2) # 0.0424 when p = 1/6
+qqnorm(z)
 
 #2
 #find the mean and sd of sample X
@@ -360,3 +363,22 @@ z <- 2/x_sd # convert 2 grams to num of sd
 cd <- pnorm(z) # calculate the cumulative density to z
 half <- 1 - cd # probability of onside off 2 grams from population mean
 2 * half # 0.02189533
+
+#4
+#use standard error and absolute diff of mean calculate t statistic 
+se <- sqrt(sd(X)^2/12+sd(Y)^2/12)
+obs <- abs(mean(X) - mean(Y))
+tstat <- obs/se
+tstat
+
+#5
+#t-distribution gets close to normal as degree of freedom grows
+#degree of freedom equals to the size of sample minus 1
+1 - pt(3,df=3)
+1 - pt(3,df=15)
+1 - pt(3,df=30)
+1 - pt(3,df=9999)
+1 - pnorm(3)
+#p-value of probability observing a quantity as large as tstat
+2 * (1 - pnorm(tstat))
+t.test(X,Y)
