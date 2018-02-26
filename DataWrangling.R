@@ -7,6 +7,11 @@ library(dplyr)
 library(nycflights13)
 library(EDAWR)
 library(tidyr)
+library(ggvis)
+
+######################################################################
+# following section is about data manipulation
+# which changes the variables, values, and units of analysis in dataset
 
 # check the content of a dataset
 help(package = "nycflights13")
@@ -27,10 +32,6 @@ dd %>% mean(na.rm = TRUE)
 ?tb
 ?population
 
-?left_join
-?inner_join
-?semi_join
-?anti_join
 # extract existing variables
 ?select
 # extract existing observations
@@ -108,13 +109,14 @@ flights %>% group_by(origin, dest) %>%
 storms %>% arrange(wind)
 storms %>% arrange(desc(wind))
 storms %>% arrange(wind, date)
-flights %>%
+delays <- flights %>%
   filter(!is.na(dep_delay) & !is.na(arr_delay)) %>% 
   mutate(avg_delay = (dep_delay + arr_delay) / 2) %>% 
   select(carrier, avg_delay) %>% 
   group_by(carrier) %>%
   summarize(avg_delay = mean(avg_delay)) %>% 
   arrange(desc(avg_delay))
+delays
 
 tb
 tb %>% 
@@ -142,7 +144,10 @@ rawtb %>%
   group_by(country, year) %>% 
   summarise(n = sum(n))
 
-# tidy data
+######################################################################
+# following section is about data tidying
+# which changes the layout of tabular data suitable for some software
+
 ?gather
 ?spread
 
@@ -186,3 +191,177 @@ pollution3
 # dplyr::gather() to build observations from variables
 # dplyr::spread() to build variables from variables
 
+# further more we can use
+# dplyr::separate() to split a column by a chr string seperator
+# dplyr::unite() to unites columns into a single column
+
+# separate
+storms
+storms2 <- storms %>% 
+  separate(date, c("year","month","day"), sep="-")
+storms2
+
+# unite
+storms2 %>% 
+  unite("date", year, month, day, sep="-")
+
+# combine the use of separate and unite to convert data format
+storms %>%
+  separate(date, c("year","month","day"), sep="-") %>% 
+  unite("date", month, day, year, sep="/")
+
+# for transform tabular data there are some functions
+# the series of bind functions are very simple
+# dplyr::bind_rows() binds observations with the same variables
+# dplyr::bind_cols() binds variables of the same observations
+# dplyr::union() binds observations and filter out identical ones
+# dplyr::setdiff() filter out observations of the second dataframe
+
+# there are some more powerful MATCH join functions
+# dplyr::left_join() maintains all observations in the 1st dataframe
+songs
+artists
+songs %>% left_join(artists, by="name")
+# join on combined variables
+songs2
+artists2
+songs2 %>% left_join(artists2, by=c("first","last"))
+# dplyr::right_join() do the similar thing on opposite direction
+songs %>% right_join(artists, by="name")
+# dplyr::inner_join() join and maintain the observations in both dfs
+songs %>% inner_join(artists, by="name")
+# dplyr::full_join() join and maintain all info in both dfs
+songs %>% full_join(artists, by="name")
+
+# some FILTER join functions could be used for some special purpose
+# dplyr::semi_join() returns observations that match the 2nd dataset
+songs %>% semi_join(artists, by="name")
+# dplyr::anti_join() returns observations that not match the 2nd dataset
+songs %>% anti_join(artists, by="name")
+
+# we use delays dataset from the previous practice
+delays
+airlines
+delays %>% 
+  left_join(airlines, by="carrier") %>% 
+  arrange(avg_delay)
+
+# a case study
+# we use tb2 dataset from the previous practice
+tb2
+population
+tb3 <- tb2 %>% 
+  left_join(population, by = c("country","year")) %>% 
+  mutate(rate = cases / population * 10000)
+# we prepare a tb3 dataset for future use
+tb3 %>% 
+  select(country, year, rate)
+tb3
+
+# the population dataset could be not as tidy as required
+# in case it is in a shape of population2 as follow, make it tidy
+population
+population2 <- population %>% 
+  spread(year, population)
+population2
+population2 %>%
+  # here, -1 means all cols except the 1st one
+  # existing col names in function do not need to have double quotes
+  # while newly generated col names need to have double quotes 
+  gather("year","population",-1,convert=TRUE)
+
+######################################################################
+# following section is about data visualization
+# which visualize data to reveal some visual patterns
+
+# visualization is a collection of visual marks, for observatioins,
+# that have visual properties, for variables. the structure of 
+# datasets parallels the structure of data visualizations.
+
+# there are many functions within ggvis for plotting data
+?ggvis
+china <- tb3 %>% filter(country == "China")
+# ggvis use ~ as a shortcut for referring to a column in data frame
+china %>% ggvis(x = ~year, y = ~rate) %>% layer_points()
+china %>% ggvis(x = ~year, y = ~rate) %>% layer_lines()
+china %>% ggvis(x = ~year, y = ~rate) %>% layer_bars()
+china %>% ggvis(x = ~year, y = ~rate) %>% layer_smooths()
+# layers of plotting graphs could be added with pipe joined
+china %>% ggvis(x = ~year, y = ~rate) %>% 
+  layer_points() %>% layer_lines()
+
+# use group_by when plotting several sets of data with ggvis
+indochina <- tb3 %>% filter(country == c("China", "India"))
+indochina
+# plotting two sets of data with same layout is confusing
+indochina %>% ggvis(x = ~year, y = ~rate) %>% layer_points()
+# sometimes plotting two sets of data may reveal error information
+indochina %>% ggvis(x = ~year, y = ~rate) %>% layer_lines()
+# ggvis supports grouped data with seperate mark for each data group 
+indochina %>% group_by(country) %>% 
+  ggvis(x = ~year, y = ~rate) %>% layer_lines()
+# ggvis can group data by itself automatically
+indochina %>% ggvis(x = ~year, y = ~rate, stroke = ~country) %>%
+  layer_lines()
+
+# especially when there are lots of datasets, they should be grouped
+tb3 %>% 
+  group_by(country) %>% 
+  ggvis(x = ~year, y = ~cases) %>%
+  layer_lines()
+
+# use different variables of the same dataset can reveal different info
+china %>% 
+  ggvis(x = ~year, y = ~population, fill = ~rate) %>% 
+  layer_points()
+
+# size para in ggvis use size to distinguish data values
+china %>% 
+  ggvis(x = ~year, y = ~rate, size = ~rate) %>% 
+  layer_points()
+
+# := is used for passing value directly to the visual space
+# while = is used for passing value to the data space
+# for example, for plotting all points in red use := to pass red
+china %>% 
+  ggvis(x = ~year, y = ~rate, fill := "red") %>% 
+  layer_points()
+# while setting stroke = "green" will not get a green line in visual
+indochina %>% group_by(country) %>% 
+  ggvis(x = ~year, y = ~rate, stroke = "green") %>% 
+  layer_lines()
+# for setting the graph in a specific visual color use :=
+indochina %>%
+  ggvis(x = ~country, y = ~cases, fill := "orange") %>% 
+  layer_boxplots()
+
+######################################################################
+# for loading and saving data, check the working dir first
+getwd()
+# use setwd() to set the working dir with a new dir value IN CONSOLE
+setwd("/Users/user") # this line of code does NOT work in script
+
+# import data could be done through wizard above Global Environment tab
+# saving data could be done with write.csv(), for example
+write.csv(df, file = "data/my-data.csv", row.names = FALSE)
+
+# final project
+flights
+airlines
+# ggvis can group data by itself and pay attention to fill = ~name para
+flights %>% 
+  left_join(airlines, by = "carrier") %>% 
+  filter(!is.na(arr_delay)) %>% 
+  ggvis(x= ~name, y = ~arr_delay, fill = ~name) %>% 
+  layer_boxplots()
+# use group by and summarize can filter out other variables
+flights %>% 
+  left_join(airlines, by = "carrier") %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(name) %>% 
+  summarize(median = median(arr_delay)) %>% 
+  arrange(desc(median))
+
+######################################################################
+# further reading
+# hands-on programming with R
